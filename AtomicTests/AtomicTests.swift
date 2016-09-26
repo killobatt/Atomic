@@ -85,22 +85,22 @@ class AtomicTests: XCTestCase {
 
     func testHighlyContestedLocking() {
         let contestedAtomic = Atomic(0)
-        let concurrentQueue = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
-        let dispatchGroup = dispatch_group_create()
+        let concurrentQueue = DispatchQueue.global(qos: .default)
+        let dispatchGroup = DispatchGroup()
         let count = 100_000
         for _ in 0..<count {
-            dispatch_group_enter(dispatchGroup)
-            dispatch_async(concurrentQueue) {
+            dispatchGroup.enter()
+            concurrentQueue.async {
                 contestedAtomic.modify { $0 + 1 }
-                dispatch_group_leave(dispatchGroup)
+                dispatchGroup.leave()
             }
         }
-        let expectation = expectationWithDescription("Dispatch Group Completion")
-        dispatch_group_notify(dispatchGroup, concurrentQueue) {
+        let expectation = self.expectation(description: "Dispatch Group Completion")
+        dispatchGroup.notify(queue: concurrentQueue) {
             expectation.fulfill()
         }
 
-        waitForExpectationsWithTimeout(10, handler: nil)
+        waitForExpectations(timeout: 10, handler: nil)
 
         XCTAssertEqual(contestedAtomic._value, count)
     }
